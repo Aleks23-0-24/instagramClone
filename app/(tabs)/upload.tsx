@@ -95,7 +95,8 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        paddingTop: 44,
+        paddingHorizontal: 20,
     },
     title: {
         marginBottom: 12,

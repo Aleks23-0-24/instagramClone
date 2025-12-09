@@ -1,8 +1,8 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import React from 'react';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -32,6 +32,7 @@ export default function TabLayout() {
           title: 'Feed',
           tabBarIcon: ({ color }) => <MaterialIcons name="dynamic-feed" size={28} color={color} />,
         }}
+        
       />
       <Tabs.Screen
         name="upload"
@@ -52,6 +53,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <MaterialIcons name="person" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="conversation"
+        options={{
+          title: 'conversation',
+          tabBarIcon: ({ color }) => <MaterialIcons name="chat-bubble" size={28} color={color} />,
         }}
       />
     </Tabs>

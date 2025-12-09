@@ -52,7 +52,7 @@ export default function ChatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12 },
+  container: { flex: 1, paddingTop: 44, paddingHorizontal: 12 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
   info: { flex: 1 },

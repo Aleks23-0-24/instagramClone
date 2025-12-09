@@ -56,7 +56,7 @@ export default function ConversationScreen() {
   };
 
   return (
-    <ThemedView style={{ flex: 1 }}>
+    <ThemedView style={styles.container}>
       <View style={styles.header}>
         {otherUser && (
           <>
@@ -80,7 +80,7 @@ export default function ConversationScreen() {
               {!isSent && <Image source={{ uri: avatar }} style={styles.messageAvatar} />}
               <View style={[styles.messageRow, isSent ? styles.messageSent : styles.messageReceived]}>
                 <ThemedText>{item.content}</ThemedText>
-                <ThemedText type="caption" style={styles.timestamp}>{new Date(item.createdAt).toLocaleTimeString()}</ThemedText>
+                <ThemedText type="default" style={styles.timestamp}>{new Date(item.createdAt).toLocaleTimeString()}</ThemedText>
               </View>
               {isSent && <Image source={{ uri: avatar }} style={styles.messageAvatar} />}
             </View>
@@ -101,6 +101,7 @@ export default function ConversationScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, paddingTop: 44 },
   header: { flexDirection: 'row', alignItems: 'center', padding: 12 },
   otherAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 8 },
   list: { padding: 12, paddingBottom: 90 },
