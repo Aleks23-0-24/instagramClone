@@ -1,15 +1,17 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Button, FlatList, Image, Platform, StyleSheet, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import API_URL from '@/config';
+
+import { PostCard } from '@/components/PostCard';
 
 
 export default function ProfileScreen() {
@@ -127,20 +129,18 @@ export default function ProfileScreen() {
           data={posts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.post}>
-              <Image source={{ uri: item.imageUrl }} style={styles.postImage} />
-              {item.description ? <ThemedText style={styles.postDesc}>{item.description}</ThemedText> : null}
-              <View style={styles.postMeta}>
-                <View style={styles.metaItem}>
-                  <MaterialIcons name="favorite" size={18} color="red" />
-                  <ThemedText style={styles.metaText}>{item.likes?.length ?? 0}</ThemedText>
-                </View>
-                <View style={styles.metaItem}>
-                  <MaterialIcons name="comment" size={18} color="gray" />
-                  <ThemedText style={styles.metaText}>{item._count?.comments ?? 0}</ThemedText>
-                </View>
-              </View>
-            </View>
+            <PostCard
+              post={item}
+              onLike={async (postId) => {
+                try {
+                  await axios.post(`${API_URL}/posts/${postId}/like`);
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  fetchPosts();
+                }
+              }}
+            />
           )}
         />
       )}
