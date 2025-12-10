@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'SUPER_SECRET_KEY'; // It's better to have this in .env
 
 export const register = async (req: Request, res: Response) => {
+  console.log('Register request body:', req.body);
   const { email, username, password } = req.body;
 
   if (!email || !username || !password) {
@@ -24,6 +25,7 @@ export const register = async (req: Request, res: Response) => {
     });
     res.status(201).json({ message: 'User created successfully', userId: user.id });
   } catch (error) {
+    console.error('Register error:', error);
     res.status(400).json({ error: 'User with this email or username already exists' });
   }
 };
