@@ -1,60 +1,41 @@
 import { Post, PostCard } from '@/components/PostCard';
 import { ThemedView } from '@/components/themed-view';
 import axios from 'axios';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/app/context/AuthContext';
 
-import API_URL from '@/config';
+import { getApiUrl } from '@/app/utils/runtimeConfig';
 
 export default function FeedScreen() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const { authState } = useAuth();
 
-    const fetchPosts = async () => {
+    const fetchFeed = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/posts`);
+            const response = await axios.get(getApiUrl('/posts'));
             setPosts(response.data);
         } catch (error) {
-            Alert.alert('Error', 'Could not fetch posts.');
+            Alert.alert('Error', 'Could not fetch feed.');
         } finally {
             setLoading(false);
         }
     };
 
-    // useFocusEffect to refetch posts when the screen is focused
-    useFocusEffect(
-        useCallback(() => {
-            fetchPosts();
-        }, [])
-    );
+    // fetch once on mount; avoid refetch on screen focus to prevent unnecessary reloads (e.g., when returning from comments)
+    useEffect(() => {
+        fetchFeed();
+    }, []);
 
     const handleLike = async (postId: string) => {
         try {
-            await axios.post(`${API_URL}/posts/${postId}/like`);
-            // Optimistically update the UI
-            setPosts(currentPosts =>
-                currentPosts.map(p => {
-                    if (p.id === postId) {
-                        const isLiked = p.likes.some(l => l.userId === authState.userId);
-                        if (isLiked) {
-                            return { ...p, likes: p.likes.filter(l => l.userId !== authState.userId) };
-                        } else {
-                            return { ...p, likes: [...p.likes, { userId: authState.userId! }] };
-                        }
-                    }
-                    return p;
-                })
-            );
-            // We can skip refetching for a smoother experience
-            // fetchPosts();
+            await axios.post(getApiUrl(`/posts/${postId}/like`));
+            fetchFeed();
         } catch (error) {
             Alert.alert('Error', 'Could not update like.');
-            fetchPosts(); // Refetch on error to revert optimistic update
         }
     };
 
@@ -70,10 +51,10 @@ export default function FeedScreen() {
         <ThemedView style={styles.container}>
             <FlatList
                 data={posts}
-                renderItem={({ item }) => <PostCard post={item} onLike={handleLike} onDelete={() => fetchPosts()} />}
+                renderItem={({ item }) => <PostCard post={item} onLike={handleLike} onDelete={() => fetchFeed()} />}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.list}
-                onRefresh={fetchPosts}
+                onRefresh={fetchFeed}
                 refreshing={loading}
             />
         </ThemedView>

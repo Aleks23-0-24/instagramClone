@@ -1,9 +1,11 @@
-import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, Alert } from 'react-native';
+import ThemedButton from '@/components/ThemedButton';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/app/context/AuthContext';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function RegisterScreen() {
     const [email, setEmail] = useState('');
@@ -11,6 +13,9 @@ export default function RegisterScreen() {
     const [password, setPassword] = useState('');
     const { onRegister } = useAuth();
     const router = useRouter();
+    const textColor = useThemeColor({}, 'text');
+    const borderColor = useThemeColor({}, 'icon');
+    const placeholderColor = useThemeColor({}, 'icon');
 
     const handleRegister = async () => {
         const result = await onRegister!(email, username, password);
@@ -26,28 +31,31 @@ export default function RegisterScreen() {
         <ThemedView style={styles.container}>
             <ThemedText type="title">Register</ThemedText>
             <TextInput
-                style={styles.input}
+                style={[styles.input, { color: textColor, borderColor }]}
                 placeholder="Email"
+                placeholderTextColor={placeholderColor}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
             />
             <TextInput
-                style={styles.input}
+                style={[styles.input, { color: textColor, borderColor }]}
                 placeholder="Username"
+                placeholderTextColor={placeholderColor}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
             />
             <TextInput
-                style={styles.input}
+                style={[styles.input, { color: textColor, borderColor }]}
                 placeholder="Password"
+                placeholderTextColor={placeholderColor}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
             />
-            <Button title="Register" onPress={handleRegister} />
+            <ThemedButton title="Register" onPress={handleRegister} />
         </ThemedView>
     );
 }
@@ -67,6 +75,6 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderRadius: 5,
         paddingHorizontal: 10,
-        color: '#fff', // Assuming dark theme
+
     },
 });

@@ -39,3 +39,7 @@ export async function deleteItem(key: string) {
     await SecureStore.deleteItemAsync(key);
   }
 }
+
+// default export to satisfy expo-router route checks
+const defaultExport = { saveItem, getItem, deleteItem };
+export default defaultExport;

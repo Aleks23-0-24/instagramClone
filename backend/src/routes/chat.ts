@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, getMessages, createMessage } from '../controllers/chat';
+import { getUsers, getMessages, createMessage, deleteMessage } from '../controllers/chat';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -10,5 +10,6 @@ router.get('/users', getUsers);
 // Messages between authenticated user and :userId
 router.get('/:userId/messages', authMiddleware, getMessages);
 router.post('/:userId/messages', authMiddleware, createMessage);
+router.delete('/:userId/messages/:messageId', authMiddleware, deleteMessage);
 
 export default router;

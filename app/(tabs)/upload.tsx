@@ -4,19 +4,21 @@ import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Button, Image, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, StyleSheet, TextInput, View } from 'react-native';
+import ThemedButton from '@/components/ThemedButton';
 
-import API_URL from '@/config';
+import { getApiUrl } from '@/app/utils/runtimeConfig';
+import { useAuth } from '@/app/context/AuthContext';
 
 
 export default function UploadScreen() {
     const [description, setDescription] = useState('');
     const [image, setImage] = useState<string | null>(null);
     const router = useRouter();
+    const { authState } = useAuth();
 
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [4, 3],
             quality: 1,
@@ -51,7 +53,8 @@ export default function UploadScreen() {
         }
 
         try {
-            await axios.post(`${API_URL}/posts`, formData, {
+            if (!authState?.authenticated) { router.push('/login'); return; }
+            await axios.post(getApiUrl('/posts'), formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -59,7 +62,7 @@ export default function UploadScreen() {
             Alert.alert('Success', 'Post uploaded!');
             setImage(null);
             setDescription('');
-            router.push('/profile');
+            router.push('/');
         } catch (error) {
             console.error(error);
             Alert.alert('Upload failed', 'Please try again.');
@@ -72,10 +75,10 @@ export default function UploadScreen() {
 
             <View style={styles.buttonRow}>
                 <View style={styles.buttonWrapper}>
-                    <Button title="Pick image" onPress={pickImage} />
+                    <ThemedButton title="Pick image" onPress={pickImage} />
                 </View>
                 <View style={styles.buttonWrapper}>
-                    <Button title="Upload" onPress={handleUpload} />
+                    <ThemedButton title="Upload" onPress={handleUpload} />
                 </View>
             </View>
 

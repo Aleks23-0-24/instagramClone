@@ -11,9 +11,10 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1a1a1a', // Dark background for the tab bar
+          backgroundColor: Colors[colorScheme ?? 'light'].background,
           borderTopWidth: 0,
           elevation: 10, // Shadow for Android
           shadowColor: '#000', // Shadow for iOS
@@ -22,7 +23,7 @@ export default function TabLayout() {
           shadowRadius: 4,
         },
         tabBarLabelStyle: {
-          color: '#ffffff', // White text for labels
+          color: Colors[colorScheme ?? 'light'].text,
           fontSize: 12,
         },
       }}>
@@ -42,13 +43,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chats"
-        options={{
-          title: 'Chats',
-          tabBarIcon: ({ color }) => <MaterialIcons name="chat" size={28} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -56,10 +50,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="conversation"
+        name="settings"
         options={{
-          title: 'conversation',
-          tabBarIcon: ({ color }) => <MaterialIcons name="chat-bubble" size={28} color={color} />,
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={28} color={color} />,
         }}
       />
     </Tabs>

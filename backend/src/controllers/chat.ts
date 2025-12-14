@@ -80,3 +80,21 @@ export const createMessage = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to create message' });
   }
 };
+
+export const deleteMessage = async (req: AuthRequest, res: Response) => {
+  const otherId = req.params.userId;
+  const messageId = req.params.messageId;
+  const userId = req.userId;
+
+  if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+  try {
+    const msg: any = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+    if (msg.senderId !== userId) return res.status(403).json({ error: 'Not allowed' });
+    await prisma.message.delete({ where: { id: messageId } });
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+};

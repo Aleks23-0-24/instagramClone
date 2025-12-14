@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
-import { ThemedText } from './themed-text';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/app/context/AuthContext';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Avatar from './Avatar';
+import { ThemedText } from './themed-text';
 
-import { API_URL } from '../config';
+import { getApiUrl } from '@/app/utils/runtimeConfig';
 
 export type Post = {
     id: string;
@@ -26,21 +29,30 @@ type PostCardProps = { post: Post, onLike: (postId: string) => void, onDelete?: 
 
 export const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
     const { authState } = useAuth();
+    const router = useRouter();
     const isLiked = post.likes.some(like => like.userId === authState?.userId);
 
-    const [showComments, setShowComments] = useState(false);
-    const [comments, setComments] = useState<any[]>([]);
-    const [loadingComments, setLoadingComments] = useState(false);
+    const [imageLoading, setImageLoading] = useState(false);
     const [commentText, setCommentText] = useState('');
 
+    const cardBg = useThemeColor({ light: '#fff', dark: '#1c1c1e' }, 'background');
+    const textColor = useThemeColor({}, 'text');
+    const muted = useThemeColor({}, 'icon');
+    const tint = useThemeColor({}, 'tint');
+    const inputBg = useThemeColor({ light: '#f9f9f9', dark: '#121212' }, 'background');
+
     const handleLike = () => {
+        if (!authState?.authenticated) {
+            router.push('/login');
+            return;
+        }
         onLike(post.id);
     };
 
     const handleDelete = async () => {
         try {
             console.log('Requesting delete for post', post.id);
-            const res = await axios.delete(`${API_URL}/posts/${post.id}`);
+            const res = await axios.delete(getApiUrl(`/posts/${post.id}`));
             console.log('Delete response', res && res.status, res && res.data);
             if (onDelete) onDelete(post.id);
         } catch (e) {
@@ -55,53 +67,38 @@ export const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
         ]);
     };
 
-    const fetchComments = async () => {
-        try {
-            setLoadingComments(true);
-            const res = await axios.get(`${API_URL}/posts/${post.id}/comments`);
-            setComments(res.data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoadingComments(false);
-        }
-    };
-
-    const toggleComments = async () => {
-        const next = !showComments;
-        setShowComments(next);
-        if (next && comments.length === 0) {
-            await fetchComments();
-        }
-    };
-
     const submitComment = async () => {
         if (!commentText.trim()) return;
+        // simple optimistic UI - try to send but don't block navigation
+        const temp = commentText;
+        setCommentText('');
         try {
-            const res = await axios.post(`${API_URL}/posts/${post.id}/comments`, { content: commentText });
-            setComments(prev => [...prev, res.data]);
-            setCommentText('');
+            await axios.post(getApiUrl(`/posts/${post.id}/comments`), { content: temp });
         } catch (e) {
             console.error(e);
         }
     };
 
     return (
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: cardBg }]}>
             <View style={styles.header}>
-                <Image 
-                    source={{ uri: post.author.avatarUrl || 'https://via.placeholder.com/40' }}
-                    style={styles.avatar}
-                />
-                <ThemedText style={styles.username}>{post.author.username}</ThemedText>
+                <TouchableOpacity onPress={() => router.push(`/user?userId=${post.author.id}`)}>
+                  <Avatar uri={post.author.avatarUrl || undefined} name={post.author.username} size={40} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push(`/user?userId=${post.author.id}`)}>
+                  <ThemedText style={styles.username}>{post.author.username}</ThemedText>
+                </TouchableOpacity>
                 {authState?.userId === post.author.id && (
                     <TouchableOpacity onPress={confirmDelete} style={styles.deleteButton}>
-                        <MaterialIcons name="delete" size={22} color="gray" />
+                        <MaterialIcons name="delete" size={22} color={muted} />
                     </TouchableOpacity>
                 )}
             </View>
             {post.imageUrl ? (
-                <Image source={{ uri: post.imageUrl }} style={styles.image} />
+                <View style={styles.image}>
+                  {imageLoading && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: '50%' }} />}
+                  <Image source={{ uri: post.imageUrl }} style={styles.image} onLoadStart={() => setImageLoading(true)} onLoadEnd={() => setImageLoading(false)} />
+                </View>
             ) : (
                 <View style={[styles.image, styles.placeholder]} />
             )}
@@ -110,43 +107,14 @@ export const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
             </View>
             <View style={styles.actions}>
                 <TouchableOpacity onPress={handleLike} style={styles.actionButton}>
-                    <MaterialIcons name={isLiked ? "favorite" : "favorite-border"} size={24} color={isLiked ? "red" : "gray"} />
-                    <Text style={styles.actionText}>{post.likes.length}</Text>
+                    <MaterialIcons name={isLiked ? "favorite" : "favorite-border"} size={24} color={isLiked ? "red" : muted} />
+                    <Text style={[styles.actionText, { color: muted }]}>{post.likes.length}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={toggleComments} style={styles.actionButton}>
-                    <MaterialIcons name="comment" size={24} color="gray" />
-                    <Text style={styles.actionText}>{post._count.comments + comments.length}</Text>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/comments', params: { postId: post.id } })} style={styles.actionButton}>
+                    <MaterialIcons name="comment" size={24} color={muted} />
+                    <Text style={[styles.actionText, { color: muted }]}>{post._count.comments}</Text>
                 </TouchableOpacity>
             </View>
-
-            {showComments && (
-                <View style={styles.commentsSection}>
-                    <FlatList
-                        data={comments}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <View style={styles.comment}>
-                                <Image source={{ uri: item.author.avatarUrl || 'https://via.placeholder.com/32' }} style={styles.commentAvatar} />
-                                <View style={styles.commentContent}>
-                                    <ThemedText style={styles.commentAuthor}>{item.author.username}</ThemedText>
-                                    <ThemedText>{item.content}</ThemedText>
-                                </View>
-                            </View>
-                        )}
-                    />
-                    <View style={styles.commentInputRow}>
-                        <TextInput
-                            style={styles.commentInput}
-                            placeholder="Write a comment..."
-                            value={commentText}
-                            onChangeText={setCommentText}
-                        />
-                        <TouchableOpacity onPress={submitComment} style={styles.sendButton}>
-                            <MaterialIcons name="send" size={20} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
         </View>
     );
 };
@@ -171,6 +139,7 @@ const styles = StyleSheet.create({
     },
     username: {
         fontWeight: 'bold',
+        marginLeft:10
     },
     image: {
         width: '100%',
@@ -230,10 +199,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 8,
         marginRight: 8,
-        color: 'white',
     },
     sendButton: {
-        backgroundColor: '#007AFF',
         padding: 8,
         borderRadius: 8,
     },

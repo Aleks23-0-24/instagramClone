@@ -1,5 +1,5 @@
-import API_URL from '@/config';
 import axios from 'axios';
+import { getApiUrl } from '@/app/utils/runtimeConfig';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { deleteItem, getItem, saveItem } from '../utils/storage';
 const TOKEN_KEY = 'anime_social_mini_token';
@@ -55,18 +55,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loadAuthData();
     }, []);
 
-    const onRegister = async (email: string, username: string, password: string) => {
+    const onRegister = React.useCallback(async (email: string, username: string, password: string) => {
         try {
-            const response = await axios.post(`${API_URL}/auth/register`, { email, username, password });
+            const url = getApiUrl('/auth/register');
+            const response = await axios.post(url, { email, username, password });
             return response.data;
         } catch (e: any) {
             return { error: true, msg: e.response?.data?.error || 'Registration failed' };
         }
-    };
+    }, []);
 
-    const onLogin = async (email: string, password: string) => {
+    const onLogin = React.useCallback(async (email: string, password: string) => {
         try {
-            const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+            const url = getApiUrl('/auth/login');
+            const response = await axios.post(url, { email, password });
             const { token, userId } = response.data;
             
             await saveItem(TOKEN_KEY, token);
@@ -79,22 +81,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (e: any) {
             return { error: true, msg: e.response?.data?.error || 'Login failed' };
         }
-    };
+    }, []);
 
-    const onLogout = async () => {
+    const onLogout = React.useCallback(async () => {
         await deleteItem(TOKEN_KEY);
         await deleteItem(USER_ID_KEY);
         delete axios.defaults.headers.common['Authorization'];
         setAuthState({ token: null, authenticated: false, userId: null });
-    };
+    }, []);
 
-    const value = {
+    const value = React.useMemo(() => ({
         onRegister,
         onLogin,
         onLogout,
         authState,
         loading,
-    };
+    }), [onRegister, onLogin, onLogout, authState, loading]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export default AuthProvider;

@@ -5,13 +5,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Button, FlatList, Image, Platform, StyleSheet, View } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, View, TouchableOpacity } from 'react-native';
+import ThemedButton from '@/components/ThemedButton';
 
-import API_URL from '@/config';
+import { getApiUrl } from '@/app/utils/runtimeConfig';
 
 import { PostCard } from '@/components/PostCard';
+import Avatar from '@/components/Avatar';
 
 
 export default function ProfileScreen() {
@@ -27,33 +29,100 @@ export default function ProfileScreen() {
     router.replace('/login');
   };
 
-  const fetchPosts = async () => {
+  const { userId: paramUserId } = useLocalSearchParams() as { userId?: string };
+  const currentUid = paramUserId || authState.userId;
+
+  const fetchPosts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/posts`);
-      const userPosts = res.data.filter((p: any) => p.author?.id === authState.userId);
-      setPosts(userPosts);
+      const res = await axios.get(getApiUrl(`/posts/user/${currentUid}`), { headers: { 'Cache-Control': 'no-cache' } });
+      setPosts(res.data);
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
+  }, [currentUid]);
+
+  const [user, setUser] = useState<any>(null);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const id = currentUid;
+      if (!id) return;
+      const res = await axios.get(getApiUrl(`/users/${id}`), { headers: { 'Cache-Control': 'no-cache' } });
+      setUser(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [currentUid]);
+
+  // compute followers/following counts
+  const [followersCount, setFollowersCount] = useState<number | null>(null);
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
+
+  const computeCounts = useCallback(async () => {
+    try {
+      const id = currentUid;
+      if (!id) return;
+      const [followersRes, followingRes] = await Promise.all([
+        axios.get(getApiUrl(`/users/${id}/followers`), { headers: { 'Cache-Control': 'no-cache' } }),
+        axios.get(getApiUrl(`/users/${id}/following`), { headers: { 'Cache-Control': 'no-cache' } }),
+      ]);
+      setFollowersCount(followersRes.data.length);
+      setFollowingCount(followingRes.data.length);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [currentUid]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (currentUid) {
+        setLoading(true);
+        try {
+          await Promise.all([
+            fetchPosts(),
+            fetchUser(),
+            computeCounts()
+          ]);
+        } catch (error) {
+          console.error("Failed to load data", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    if (isFocused) {
+      loadData();
+    }
+  }, [isFocused, currentUid, fetchPosts, fetchUser, computeCounts]);
+
+  const avatarUrl = user?.avatarUrl;
+  const username = user?.username || 'User';
+
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!authState.userId || !currentUid) return;
+        const res = await axios.get(getApiUrl(`/users/${authState.userId}/following`), { headers: { 'Cache-Control': 'no-cache' } });
+        const followingList = res.data || [];
+        setIsFollowing(followingList.some((u: any) => u.id === currentUid));
+      } catch (e) { /* ignore */ }
+    })();
+  }, [currentUid, authState.userId]);
+
+  const toggleFollow = async () => {
+    try {
+      await axios.post(getApiUrl(`/users/${currentUid}/follow`));
+      setIsFollowing(!isFollowing);
+      computeCounts(); // re-fetch counts
+    } catch (e) { console.error(e); }
   };
 
-  useEffect(() => {
-    if (authState.userId) fetchPosts();
-    else setLoading(false);
-  }, [authState.userId]);
-
-  useEffect(() => {
-    if (isFocused && authState.userId) fetchPosts();
-  }, [isFocused]);
-
-  const avatarUrl = posts[0]?.author?.avatarUrl;
-  const username = posts[0]?.author?.username || 'User';
-
   const pickAvatar = async () => {
+    if (currentUid !== authState.userId) return; // only allow changing own avatar
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -78,11 +147,12 @@ export default function ProfileScreen() {
 
     try {
       setUploadingAvatar(true);
-      await axios.put(`${API_URL}/users/avatar`, formData, {
+      await axios.put(getApiUrl('/users/avatar'), formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       // refresh posts/user info
-      await fetchPosts();
+      await fetchPosts(currentUid);
+      await fetchUser(currentUid);
     } catch (e) {
       console.error(e);
     } finally {
@@ -101,22 +171,37 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <ThemedText type="title">{username.charAt(0).toUpperCase()}</ThemedText>
+        <Avatar uri={avatarUrl} name={username} size={96} />
+        <ThemedText type="title" style={styles.username}>{username}</ThemedText>
+
+        {currentUid !== authState.userId && (
+          <TouchableOpacity style={{ marginTop: 8 }} onPress={toggleFollow}>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: isFollowing ? '#444' : '#0a84ff', borderRadius: 8 }}>
+              <ThemedText>{isFollowing ? 'Unfollow' : 'Follow'}</ThemedText>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {currentUid === authState.userId && (
+          <View style={styles.logout}>
+            <ThemedButton title={uploadingAvatar ? 'Uploading...' : 'Change Avatar'} onPress={pickAvatar} disabled={uploadingAvatar} />
           </View>
         )}
-        <ThemedText type="title" style={styles.username}>{username}</ThemedText>
-      </View>
 
-      <View style={styles.logout}>
-        <Button title={uploadingAvatar ? 'Uploading...' : 'Change Avatar'} onPress={pickAvatar} disabled={uploadingAvatar} />
-      </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 10 }}>
+          <TouchableOpacity style={{ marginHorizontal: 12, alignItems: 'center' }} onPress={() => router.push({ pathname: '/followers', params: { userId: currentUid, tab: 'followers' } })}>
+            <ThemedText type="title">{typeof followersCount === 'number' ? followersCount : '-'}</ThemedText>
+            <ThemedText>Followers</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ marginHorizontal: 12, alignItems: 'center' }} onPress={() => router.push({ pathname: '/followers', params: { userId: currentUid, tab: 'following' } })}>
+            <ThemedText type="title">{typeof followingCount === 'number' ? followingCount : '-'}</ThemedText>
+            <ThemedText>Following</ThemedText>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.logout}>
-        <Button title="Logout" onPress={handleLogout} />
+        <View style={styles.logout}>
+          <ThemedButton title="Logout" onPress={handleLogout} />
+        </View>
       </View>
 
       <ThemedText type="subtitle" style={styles.section}>Publications</ThemedText>
@@ -133,7 +218,7 @@ export default function ProfileScreen() {
               post={item}
               onLike={async (postId) => {
                 try {
-                  await axios.post(`${API_URL}/posts/${postId}/like`);
+                  await axios.post(getApiUrl(`/posts/${postId}/like`));
                 } catch (e) {
                   console.error(e);
                 } finally {

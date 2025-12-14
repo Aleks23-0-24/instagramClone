@@ -55,9 +55,79 @@ export const createPost = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getFeed = async (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+
+  try {
+    const following = await prisma.follows.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+
+    const followingIds = following.map((f) => f.followingId);
+    followingIds.push(userId); // also include user's own posts
+
+    const posts = await prisma.post.findMany({
+      where: {
+        authorId: {
+          in: followingIds,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: { id: true, username: true, avatarUrl: true },
+        },
+        likes: {
+          select: { userId: true },
+        },
+        _count: {
+          select: { comments: true },
+        },
+      },
+    });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: 'Something went wrong while fetching feed' });
+  }
+};
+
+export const getPostsByUser = async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+
+  try {
+    const posts = await prisma.post.findMany({
+      where: {
+        authorId: userId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: { id: true, username: true, avatarUrl: true },
+        },
+        likes: {
+          select: { userId: true },
+        },
+        _count: {
+          select: { comments: true },
+        },
+      },
+    });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: 'Something went wrong while fetching posts' });
+  }
+};
+
 export const deletePost = async (req: AuthRequest, res: Response) => {
   const { postId } = req.params;
   const userId = req.userId;
+
+
 
   console.log('deletePost called for', postId, 'by user', userId);
 
