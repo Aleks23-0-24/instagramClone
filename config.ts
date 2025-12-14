@@ -1,3 +1,3 @@
-export const API_URL = process.env.API_URL || "http://192.168.228.33:3000/api";
+export const API_URL = process.env.API_URL || "http://172.20.10.13:3000/api";
 
 export default API_URL;
