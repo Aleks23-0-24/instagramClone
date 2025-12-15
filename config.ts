@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 
 // Determine API host so physical devices scanning the Expo QR can reach the backend.
 // Prefer explicit env var if provided, otherwise derive LAN IP from Expo debuggerHost.
-const fallback = 'http://192.168.1.92:3000/api';
+const fallback = 'http://192.168.32.149:3000/api';
 let apiUrl = fallback;
 
 try {

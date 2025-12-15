@@ -100,7 +100,7 @@ export const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
                   <Image source={{ uri: post.imageUrl }} style={styles.image} onLoadStart={() => setImageLoading(true)} onLoadEnd={() => setImageLoading(false)} />
                 </View>
             ) : (
-                <View style={[styles.image, styles.placeholder]} />
+                <View style={[styles.image]} />
             )}
             <View style={styles.content}>
                 <ThemedText style={styles.description}>{post.description}</ThemedText>

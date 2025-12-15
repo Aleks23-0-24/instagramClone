@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import './utils/axiosSetup';
 
 const RootLayoutNav = () => {
   const { authState, loading } = useAuth();
@@ -43,6 +44,8 @@ const RootLayoutNav = () => {
   }, []);
 
   // While loading the auth state or runtime config, show a loading indicator or a splash screen.
+  const colorScheme = useColorScheme() ?? 'light';
+  const themeColors = Colors[colorScheme];
   if (loading || !runtimeReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -50,9 +53,6 @@ const RootLayoutNav = () => {
       </View>
     );
   }
-
-  const colorScheme = useColorScheme() ?? 'light';
-  const themeColors = Colors[colorScheme];
 
   const screenHeaderOptions = {
     headerStyle: { backgroundColor: themeColors.background },

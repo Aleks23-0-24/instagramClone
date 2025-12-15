@@ -11,7 +11,7 @@ import { getApiUrl } from '@/app/utils/runtimeConfig';
 export default function FeedScreen() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const { authState } = useAuth();
+    const { authState, loading: authLoading } = useAuth();
 
     const fetchFeed = async () => {
         try {
@@ -25,10 +25,10 @@ export default function FeedScreen() {
         }
     };
 
-    // fetch once on mount; avoid refetch on screen focus to prevent unnecessary reloads (e.g., when returning from comments)
+    // fetch once after auth loading completes to ensure Authorization header is set when required
     useEffect(() => {
-        fetchFeed();
-    }, []);
+        if (!authLoading) fetchFeed();
+    }, [authLoading]);
 
     const handleLike = async (postId: string) => {
         try {
